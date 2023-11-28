@@ -15,9 +15,9 @@ post https://stackoverflow.com/questions/44787437/how-to-convert-a-wav-file-to-a
 for it. The actual accesing of the files, processing of the wav data, and saving of the images was all pretty simple itself."""
 
 #short time fourier transform of audio signal
-def stft(sig, frameSize, overlapFac=0.5, window=np.hanning):
+def stft(sig, frameSize, overlapFac=0.5, window=np.hanning, hopFactor=1):
     win = window(frameSize)
-    hopSize = int(frameSize - np.floor(overlapFac * frameSize))
+    hopSize = int(frameSize - np.floor(overlapFac * frameSize)) * hopFactor
 
     # zeros at beginning (thus center of 1st window should be for sample nr. 0)   
     samples = np.append(np.zeros(int(np.floor(frameSize/2.0))), sig)    
@@ -31,7 +31,7 @@ def stft(sig, frameSize, overlapFac=0.5, window=np.hanning):
 
     return np.fft.rfft(frames)    
 
-#scale frequency axis logarithmically
+
 def logscale_spec(spec, sr=44100, factor=20.):
     timebins, freqbins = np.shape(spec)
 
@@ -59,123 +59,60 @@ def logscale_spec(spec, sr=44100, factor=20.):
     return newspec, freqs
 
 
-folders1 = ["Pipistrellus pygmaus with social sound", "Noctula nyctalus with noise", "Pipistrellus pygmaus wo social sound", "Noctula nyctalus with out social sound and noise"]
-folders = ["test"]
+
+
+folders = ["Pipistrellus pygmaus with social sound", "Noctula nyctalus with noise", "Pipistrellus pygmaus wo social sound", "Noctula nyctalus with out social sound and noise"]
+folders1 = ["test"]
 folders1 = ["Noctula nyctalus with out social sound and noise"]
 def wavToSpectro(folders):
     for folder in folders:
-        for fN in os.listdir(f"/Users/elijahmendoza/OCS_Materials/Neural_Networks/NeuralNetworksProject/{folder}"):
+        for fN in os.listdir(f"/Users/elijahmendoza/OCS_Materials/Neural_Networks/NeuralNetworksProject/{folder}/to crop"):
             #print(fN)
             fileName = fN[:-4]
             if ".wav" in fN:
-                #fileName = fileName[:-4]
-                #print(f"/Users/elijahmendoza/OCS_Materials/Neural_Networks/NeuralNetworksProject/{folder}/{fileName}")
-                fileToImport = f"/Users/elijahmendoza/OCS_Materials/Neural_Networks/NeuralNetworksProject/{folder}/{fileName}.wav"
-                pngName = f"/Users/elijahmendoza/OCS_Materials/Neural_Networks/NeuralNetworksProject/{folder}/{fileName}(test1)"
+                fileToImport = f"/Users/elijahmendoza/OCS_Materials/Neural_Networks/NeuralNetworksProject/{folder}/to crop/{fileName}.wav"
+                pngName = f"/Users/elijahmendoza/OCS_Materials/Neural_Networks/NeuralNetworksProject/{folder}/Bar Spectrograms/{fileName}"
 
-                #currentfile is the data obj of the new wavfile
-                #currentFile = wave.open(fileToImport, 'r')
+
                 samp_rate, samp = wavfile.read(fileToImport)
-                #sample_rate, samples = read_wav(fileToImport)
-                #sample_rate = currentFile.getnframes()
-                #print(samp_rate)
-                #samples = currentFile.getframerate()
-                #print(samp)
-                
+
+                # our samp is 5_000_000 (for a given clip)
+                # our samp rate is 500_000 (for a given clip)
+                # if we divide our samp/samp_rate then we get the length of our clip (in this case 10)
+                # adjust sample rate 
+  
                 frequencies, times, spectrogram = signal.spectrogram(samp, samp_rate)
                 binsize = 2**10
                 colormap = "twilight"
 
-                """ plt.pcolormesh(times, frequencies, np.log(spectrogram))
-                #plt.imshow(spectrogram, cmap="jet")
-                plt.ylabel('Frequency [Hz]')
-                plt.xlabel('Time [sec]')
-                plt.savefig(f'{pngName}') """
+                #hopfactor Max: 15
+                #hopfactor min: ?
 
-                s = stft(samp, binsize)
-                sshow, freq = logscale_spec(s, factor=1.0, sr=samp_rate)
+                s = stft(samp, binsize, hopFactor=4)
+                sshow, freq = logscale_spec(s, factor=1, sr=samp_rate)
                 ims = 20.*np.log10(np.abs(sshow)/10e-6) # amplitude to decibel
                 timebins, freqbins = np.shape(ims)
-                print(timebins)
                 
-                """ plt.figure(figsize=(15, 7.5))
-                plt.imshow(np.transpose(ims), origin="lower", aspect="auto", cmap=colormap, interpolation="none")
-                plt.colorbar()
-
-                plt.xlabel("time (s)")
-                plt.ylabel("frequency (hz)")
-                plt.xlim([0, timebins-1])
-                plt.ylim([0, freqbins])
-
-                xlocs = np.float32(np.linspace(0, timebins-1, 5))
-                plt.xticks(xlocs, ["%.02f" % l for l in ((xlocs*len(samp)/timebins)+(0.5*binsize))/samp_rate])
-                ylocs = np.int16(np.round(np.linspace(0, freqbins-1, 10)))
-                plt.yticks(ylocs, ["%.02f" % freq[i] for i in ylocs])
-
-                plt.savefig(pngName, bbox_inches="tight")
-
-                plt.clf() """
-
-                # Define the frequency range to plot
-                start_freq_pipi = 50
-                end_freq_pipi = 220
-
-                start_freq_noct = 0
-                end_freq_noct = 45
-
-
-                plt.figure(figsize=(9.3, 5))
-                plt.imshow(np.transpose(ims), origin="lower", aspect="auto", cmap=colormap, interpolation="none")
+                plt.figure(figsize=(3.0, 2.0), dpi=100)
+                plt.imshow(np.transpose(ims), origin="lower", aspect="auto", cmap=colormap, interpolation="bilinear")
                 #plt.colorbar()
+                plt.axis('off')  # Turn off axis
+                plt.margins(0, 0)  # Set margins to zero
+                #plt.gca().set_aspect('equal')
 
                 #plt.xlabel("time (s)")
                 #plt.ylabel("frequency (hz)")
-                if folder == "Pipistrellus pygmaus wo social sound":
-                    plt.xlim([0, timebins-1])
-                    plt.ylim([start_freq_pipi, end_freq_pipi])  # Setting y-axis limits for the specified frequency range
-                    plt.axis('off')  # Turn off axis
-                    plt.margins(0, 0)  # Set margins to zero
-                    plt.gca().set_aspect(18.60000)
-                elif folder == "Pipistrellus pygmaus with social sound":
-                    plt.xlim([0, timebins-1])
-                    plt.ylim([start_freq_pipi, end_freq_pipi])  # Setting y-axis limits for the specified frequency range
-                    plt.axis('off')  # Turn off axis
-                    plt.margins(0, 0)  # Set margins to zero
-                    plt.gca().set_aspect(18.60000)
-                elif folder == "Noctula nyctalus with noise":
-                    plt.xlim([0, timebins-1])
-                    plt.ylim([start_freq_noct, end_freq_noct])  # Setting y-axis limits for the specified frequency range
-                    plt.axis('off')  # Turn off axis
-                    plt.margins(0, 0)  # Set margins to zero
-                    plt.gca().set_aspect(18.60000)
-                elif folder == "Noctula nyctalus with out social sound and noise":
-                    plt.xlim([0, timebins-1])
-                    plt.ylim([start_freq_pipi, end_freq_pipi])  # Setting y-axis limits for the specified frequency range
-                    plt.axis('off')  # Turn off axis
-                    plt.margins(0, 0)  # Set margins to zero
-                    plt.gca().set_aspect(18.60000)
-                elif folder == "test":
-                    if fileName == "Noctula Nyctaus Example" or fileName == "Noctula Nyctaus Example w/ Noise" or fileName == "noctulawithnoise97":
-                        plt.xlim([0, timebins-1])
-                        plt.ylim([start_freq_noct, end_freq_noct])  # Setting y-axis limits for the specified frequency range
-                        plt.axis('off')  # Turn off axis
-                        plt.margins(0, 0)  # Set margins to zero
-                        plt.gca().set_aspect(18.60000)
-                    else:
-                        plt.xlim([0, timebins-1])
-                        plt.ylim([start_freq_pipi, end_freq_pipi])  # Setting y-axis limits for the specified frequency range
-                        plt.axis('off')  # Turn off axis
-                        plt.margins(0, 0)  # Set margins to zero
-                        plt.gca().set_aspect(18.60000)
-                
+                plt.xlim([0, timebins-1])
+                plt.ylim([0, 300])
 
                 #xlocs = np.float32(np.linspace(0, timebins-1, 5))
                 #plt.xticks(xlocs, ["%.02f" % l for l in ((xlocs*len(samp)/timebins)+(0.5*binsize))/samp_rate])
-                #ylocs = np.int16(np.round(np.linspace(start_freq, end_freq, 10)))
-                #plt.yticks(ylocs, ["%.02f" % f for f in ylocs])
+                #ylocs = np.int16(np.round(np.linspace(0, freqbins-1, 10)))
+                #plt.yticks(ylocs, ["%.02f" % freq[i] for i in ylocs])
 
-                plt.savefig(pngName, bbox_inches='tight',pad_inches=0.0)
+                plt.savefig(pngName, bbox_inches="tight", pad_inches=0.0)
                 plt.clf()
+                plt.close()
 
 
 
