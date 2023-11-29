@@ -16,7 +16,7 @@ for it. The actual accesing of the files, processing of the wav data, and saving
 
 #short time fourier transform of audio signal
 def stft(sig, frameSize, overlapFac=0.5, window=np.hanning, hopFactor=1):
-    win = window(frameSize)
+    win = np.hamming(frameSize) + 1e-10
     hopSize = int(frameSize - np.floor(overlapFac * frameSize)) * hopFactor
 
     # zeros at beginning (thus center of 1st window should be for sample nr. 0)   
@@ -83,27 +83,27 @@ def wavToSpectro(folders):
   
                 frequencies, times, spectrogram = signal.spectrogram(samp, samp_rate)
                 binsize = 2**10
-                colormap = "twilight"
+                colormap = "jet"
 
                 #hopfactor Max: 15
                 #hopfactor min: ?
 
-                s = stft(samp, binsize, hopFactor=4)
+                s = stft(samp, binsize, hopFactor=2)
                 sshow, freq = logscale_spec(s, factor=1, sr=samp_rate)
-                ims = 20.*np.log10(np.abs(sshow)/10e-6) # amplitude to decibel
+                ims = 20. * np.log10(np.where(np.abs(sshow) < 1e-10, 1e-10, np.abs(sshow))) # amplitude to decibel
                 timebins, freqbins = np.shape(ims)
                 
                 plt.figure(figsize=(3.0, 2.0), dpi=100)
                 plt.imshow(np.transpose(ims), origin="lower", aspect="auto", cmap=colormap, interpolation="bilinear")
                 #plt.colorbar()
-                plt.axis('off')  # Turn off axis
-                plt.margins(0, 0)  # Set margins to zero
+                plt.axis('off')   # Turn off axis
+                plt.margins(0, 0) # Set margins to zero
                 #plt.gca().set_aspect('equal')
 
                 #plt.xlabel("time (s)")
                 #plt.ylabel("frequency (hz)")
                 plt.xlim([0, timebins-1])
-                plt.ylim([0, 300])
+                plt.ylim([3, 250])
 
                 #xlocs = np.float32(np.linspace(0, timebins-1, 5))
                 #plt.xticks(xlocs, ["%.02f" % l for l in ((xlocs*len(samp)/timebins)+(0.5*binsize))/samp_rate])
